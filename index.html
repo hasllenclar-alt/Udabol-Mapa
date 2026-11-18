@@ -86,10 +86,11 @@
         // Inicializar mapa centrado en la universidad
         const map = L.map('map').setView(entradaCoord, 19);
 
-        // Capa de Esri World Imagery (Satélite)
+        // Capa de Esri World Imagery (Satélite) con maxZoom configurado a 19 para evitar pantallas grises
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-            maxZoom: 21
+            maxZoom: 19,
+            minZoom: 15
         }).addTo(map);
 
         // Capa base para la entrada principal
@@ -266,8 +267,8 @@
             // Añadir popup interactivo con la información del aula
             capaActualPoligono.bindPopup(`<b>${aula.nombre}</b><br>${aula.descripcion}`).openPopup();
 
-            // Hacer zoom automático hacia la ruta y el aula seleccionada
-            map.fitBounds(capaActualRuta.getBounds(), { padding: [50, 50] });
+            // Hacer zoom automático hacia la ruta y el aula seleccionada (limitado para no pasar de zoom 19)
+            map.fitBounds(capaActualRuta.getBounds(), { padding: [50, 50], maxZoom: 19 });
         }
     </script>
 </body>
