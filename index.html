@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Interactivo UDABOL - Cochabamba</title>
+    <title>Mapa Interactivo UDABOL - Campus Sacaba</title>
 
-    <!-- Hojas de estilo de Leaflet (Mapa interactivo) -->
+    <!-- Hojas de estilo de Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -26,7 +26,7 @@
             height: 100vh;
         }
 
-        /* Panel flotante de búsqueda */
+        /* Panel flotante de búsqueda superior */
         .search-container {
             position: absolute;
             top: 15px;
@@ -81,7 +81,7 @@
             background: #600000;
         }
 
-        /* Indicaciones del trayecto */
+        /* Panel inferior de información */
         .info-panel {
             position: absolute;
             bottom: 20px;
@@ -117,15 +117,15 @@
             📍 <h2>UDABOL Campus Sacaba</h2>
         </div>
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="¿A dónde quieres ir? (ej. CC-4, Cajas)">
+            <input type="text" id="searchInput" placeholder="Buscar (ej. CC-1, Cajas, A1)..." onkeypress="handleKeyPress(event)">
             <button onclick="buscarDestino()">Ir</button>
         </div>
     </div>
 
-    <!-- Panel con indicaciones -->
+    <!-- Panel de notificaciones de ruta -->
     <div class="info-panel" id="infoPanel">
-        <h3 id="rutaTitulo">Ruta trazada</h3>
-        <p id="rutaDetalle">Sigue la línea marcada en el mapa para llegar a tu destino.</p>
+        <h3 id="rutaTitulo">Destino encontrado</h3>
+        <p id="rutaDetalle">Visualizando ubicación y detalles en el mapa.</p>
     </div>
 
     <!-- Contenedor del mapa -->
@@ -136,43 +136,60 @@
     <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
 
     <script>
-        // 1. Inicializar el mapa centrado en UDABOL Sacaba
-        const map = L.map('map').setView([-17.3918, -66.0692], 18);
+        // 1. Inicializar el mapa centrado provisionalmente en UDABOL
+        const map = L.map('map').setView([-17.3906, -66.0686], 18);
 
-        // 2. Capa base de mapas (OpenStreetMap / Mapa claro)
+        // 2. Capa base de mapas (OpenStreetMap)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 20,
-            attribution: '© UDABOL Mapa Interactivo'
+            attribution: '© UDABOL Mapa Interactivo | Campus Sacaba'
         }).addTo(map);
 
-        // 3. Cargar automáticamente tu archivo KML de Google Earth Pro
-        // Asegúrate de nombrar tu archivo subido como "mapa.kml"
-        const kmlLayer = omnivore.kml('mapa.kml')
+        // Variable global para almacenar la capa KML cargada
+        let kmlLayer;
+
+        // 3. Cargar el archivo 'mapa.kml' desde el repositorio de GitHub Pages
+        kmlLayer = omnivore.kml('mapa.kml')
             .on('ready', function() {
-                // Ajustar la cámara automáticamente para encuadrar todo lo que dibujaste en Google Earth
-                map.fitBounds(kmlLayer.getBounds());
-                
-                // Darle estilo a los polígonos y pasillos dibujados
+                // Ajustar automáticamente la vista del mapa a los límites del KML
+                try {
+                    map.fitBounds(kmlLayer.getBounds());
+                } catch(e) {
+                    console.log("Ajuste automático de límites por defecto aplicado.");
+                }
+
+                // Personalizar estilos visuales para polígonos y líneas si es necesario
                 kmlLayer.eachLayer(function(layer) {
                     if (layer instanceof L.Polygon) {
                         layer.setStyle({
                             color: '#800000',
                             fillColor: '#b30000',
-                            fillOpacity: 0.4,
+                            fillOpacity: 0.3,
                             weight: 2
                         });
                     } else if (layer instanceof L.Polyline) {
                         layer.setStyle({
                             color: '#0066ff',
                             weight: 4,
-                            dashArray: '5, 10'
+                            dashArray: '5, 5'
                         });
                     }
                 });
             })
+            .on('error', function(error) {
+                console.error("Error al cargar el archivo mapa.kml:", error);
+                alert("No se pudo cargar el archivo 'mapa.kml'. Verifica que esté en la raíz del repositorio.");
+            })
             .addTo(map);
 
-        // 4. Función básica para buscar aula u oficina
+        // Permitir búsqueda presionando la tecla "Enter"
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                buscarDestino();
+            }
+        }
+
+        // 4. Función de búsqueda inteligente dentro de los elementos del KML
         function buscarDestino() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             if (!query) return;
@@ -181,30 +198,35 @@
 
             kmlLayer.eachLayer(function(layer) {
                 if (layer.feature && layer.feature.properties && layer.feature.properties.name) {
-                    const nombre = layer.feature.properties.name.toLowerCase();
-                    if (nombre.includes(query)) {
+                    const nombreLugar = layer.feature.properties.name.toLowerCase();
+                    
+                    if (nombreLugar.includes(query)) {
                         encontrado = true;
-                        
-                        // Centrar mapa en el lugar buscado
+
+                        // Centrar el mapa según el tipo de geometría
                         if (layer.getBounds) {
-                            map.fitBounds(layer.getBounds());
+                            map.fitBounds(layer.getBounds(), { maxZoom: 19 });
                         } else if (layer.getLatLng) {
                             map.setView(layer.getLatLng(), 19);
                         }
 
-                        // Abrir globo informativo del lugar
-                        layer.bindPopup(<b>${layer.feature.properties.name}</b><br>Haz llegado a tu destino.).openPopup();
+                        // Abrir popup con la descripción original (fotos de WhatsApp, etc.)
+                        if (layer.feature.properties.description) {
+                            layer.bindPopup(`<div style="max-height: 250px; overflow-y: auto;"><b>${layer.feature.properties.name}</b><br>${layer.feature.properties.description}</div>`).openPopup();
+                        } else {
+                            layer.bindPopup(`<b>${layer.feature.properties.name}</b>`).openPopup();
+                        }
 
-                        // Mostrar panel inferior
+                        // Mostrar panel informativo inferior
                         document.getElementById('infoPanel').style.display = 'block';
-                        document.getElementById('rutaTitulo').innerText = Destino: ${layer.feature.properties.name};
-                        document.getElementById('rutaDetalle').innerText = Sigue el camino azul resaltado desde la entrada principal.;
+                        document.getElementById('rutaTitulo').innerText = `Lugar: ${layer.feature.properties.name}`;
+                        document.getElementById('rutaDetalle').innerText = `Ubicación encontrada y resaltada correctamente en el mapa.`;
                     }
                 }
             });
 
             if (!encontrado) {
-                alert('No encontramos ese lugar. Prueba buscando: CC-4, Cajas, Biblioteca, etc.');
+                alert('No se encontró ningún lugar con ese nombre. Prueba buscando: "CC-1", "Cajas", "Biblioteca", "A1", etc.');
             }
         }
     </script>
