@@ -1,195 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Interactivo UDABOL - Campus Sacaba</title>
-
-    <!-- Hojas de estilo de Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        #map {
-            width: 100%;
-            height: 100vh;
-        }
-
-        /* Panel flotante de búsqueda superior */
-        .search-container {
-            position: absolute;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            width: 90%;
-            max-width: 420px;
-            background: white;
-            padding: 12px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .search-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .search-header h2 {
-            font-size: 16px;
-            color: #800000; /* Color guindo UDABOL */
-        }
-
-        .search-box {
-            display: flex;
-            gap: 8px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 10px 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-        }
-
-        button {
-            background: #800000;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #600000;
-        }
-
-        /* Panel inferior de información */
-        .info-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            width: 90%;
-            max-width: 420px;
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            display: none;
-        }
-
-        .info-panel h3 {
-            color: #333;
-            font-size: 15px;
-            margin-bottom: 5px;
-        }
-
-        .info-panel p {
-            color: #666;
-            font-size: 13px;
-        }
-    </style>
-</head>
-<body>
-
-    <!-- Panel de búsqueda flotante -->
-    <div class="search-container">
-        <div class="search-header">
-            📍 <h2>UDABOL Campus Sacaba</h2>
-        </div>
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Buscar (ej. CC-1, Cajas, A1)..." onkeypress="handleKeyPress(event)">
-            <button onclick="buscarDestino()">Ir</button>
-        </div>
-    </div>
-
-    <!-- Panel de notificaciones de ruta -->
-    <div class="info-panel" id="infoPanel">
-        <h3 id="rutaTitulo">Destino encontrado</h3>
-        <p id="rutaDetalle">Visualizando ubicación y detalles en el mapa.</p>
-    </div>
-
-    <!-- Contenedor del mapa -->
-    <div id="map"></div>
-
-    <!-- Scripts de Leaflet y lector de KML (omnivore) -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
-
-    <script>
-        // 1. Inicializar el mapa centrado provisionalmente en UDABOL
-        const map = L.map('map').setView([-17.3906, -66.0686], 18);
-
-        // 2. Capa base de mapas (OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 20,
-            attribution: '© UDABOL Mapa Interactivo | Campus Sacaba'
-        }).addTo(map);
-
-        // Variable global para almacenar la capa KML cargada
-        let kmlLayer;
-
-        // 3. Cargar el archivo 'mapa.kml' desde el repositorio de GitHub Pages
-        kmlLayer = omnivore.kml('mapa.kml')
-            .on('ready', function() {
-                // Ajustar automáticamente la vista del mapa a los límites del KML
-                try {
-                    map.fitBounds(kmlLayer.getBounds());
-                } catch(e) {
-                    console.log("Ajuste automático de límites por defecto aplicado.");
-                }
-
-                // Personalizar estilos visuales para polígonos y líneas si es necesario
-                kmlLayer.eachLayer(function(layer) {
-                    if (layer instanceof L.Polygon) {
-                        layer.setStyle({
-                            color: '#800000',
-                            fillColor: '#b30000',
-                            fillOpacity: 0.3,
-                            weight: 2
-                        });
-                    } else if (layer instanceof L.Polyline) {
-                        layer.setStyle({
-                            color: '#0066ff',
-                            weight: 4,
-                            dashArray: '5, 5'
-                        });
-                    }
-                });
-            })
-            .on('error', function(error) {
-                console.error("Error al cargar el archivo mapa.kml:", error);
-                alert("No se pudo cargar el archivo 'mapa.kml'. Verifica que esté en la raíz del repositorio.");
-            })
-            .addTo(map);
-
-        // Permitir búsqueda presionando la tecla "Enter"
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                buscarDestino();
-            }
-        }
-
-        // 4. Función de búsqueda inteligente dentro de los elementos del KML
+// 4. Función de búsqueda inteligente y flexible
         function buscarDestino() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             if (!query) return;
@@ -200,35 +9,34 @@
                 if (layer.feature && layer.feature.properties && layer.feature.properties.name) {
                     const nombreLugar = layer.feature.properties.name.toLowerCase();
                     
-                    if (nombreLugar.includes(query)) {
+                    // Compara si el texto escrito está contenido en el nombre (ej. buscar "cc1" encuentra "aula-cc1")
+                    if (nombreLugar.includes(query) || query.includes(nombreLugar)) {
                         encontrado = true;
 
-                        // Centrar el mapa según el tipo de geometría
+                        // Centrar el mapa en el lugar encontrado
                         if (layer.getBounds) {
                             map.fitBounds(layer.getBounds(), { maxZoom: 19 });
                         } else if (layer.getLatLng) {
                             map.setView(layer.getLatLng(), 19);
                         }
 
-                        // Abrir popup con la descripción original (fotos de WhatsApp, etc.)
+                        // Mostrar la descripción original del KML (con las imágenes de WhatsApp)
+                        let contenidoPopup = `<b>${layer.feature.properties.name}</b>`;
                         if (layer.feature.properties.description) {
-                            layer.bindPopup(`<div style="max-height: 250px; overflow-y: auto;"><b>${layer.feature.properties.name}</b><br>${layer.feature.properties.description}</div>`).openPopup();
-                        } else {
-                            layer.bindPopup(`<b>${layer.feature.properties.name}</b>`).openPopup();
+                            contenidoPopup += `<div style="max-height: 200px; overflow-y: auto; margin-top: 5px;">${layer.feature.properties.description}</div>`;
                         }
+                        
+                        layer.bindPopup(contenidoPopup).openPopup();
 
-                        // Mostrar panel informativo inferior
+                        // Actualizar el panel inferior de información
                         document.getElementById('infoPanel').style.display = 'block';
-                        document.getElementById('rutaTitulo').innerText = `Lugar: ${layer.feature.properties.name}`;
-                        document.getElementById('rutaDetalle').innerText = `Ubicación encontrada y resaltada correctamente en el mapa.`;
+                        document.getElementById('rutaTitulo').innerText = `Destino: ${layer.feature.properties.name}`;
+                        document.getElementById('rutaDetalle').innerText = `Ubicación encontrada y seleccionada en el campus.`;
                     }
                 }
             });
 
             if (!encontrado) {
-                alert('No se encontró ningún lugar con ese nombre. Prueba buscando: "CC-1", "Cajas", "Biblioteca", "A1", etc.');
+                alert('No se encontró ningún lugar con ese nombre. Prueba escribiendo: "CC1", "Cajas", "Biblioteca", "A1", etc.');
             }
         }
-    </script>
-</body>
-</html>
